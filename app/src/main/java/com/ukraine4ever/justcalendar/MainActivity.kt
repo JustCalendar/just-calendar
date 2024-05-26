@@ -8,6 +8,7 @@ import androidx.activity.viewModels
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -50,6 +52,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
@@ -256,17 +259,27 @@ fun CalendarDayCell(
     day: CalendarDay,
     modifier: Modifier = Modifier,
 ) {
+    var selected by remember { mutableStateOf(false) }
     Box(
-        modifier = modifier.background(
-            if (day.date.month.value % 2 == 0) MaterialTheme.colorScheme.onSurface.copy(
-                alpha = 0.05f
-            ) else Color.Transparent,
-            shape = when (day.date.dayOfMonth) {
-                1 -> RoundedCornerShape(topStart = 8.dp)
-                day.date.lengthOfMonth() -> RoundedCornerShape(bottomEnd = 8.dp)
-                else -> RectangleShape
+        modifier = modifier
+            .background(
+                if (selected) MaterialTheme.colorScheme.primary
+                else if (day.date.month.value % 2 == 0) MaterialTheme.colorScheme.onSurface.copy(
+                    alpha = 0.05f
+                ) else Color.Transparent,
+                shape = if (selected) CircleShape else when (day.date.dayOfMonth) {
+                    1 -> RoundedCornerShape(topStart = 8.dp)
+                    day.date.lengthOfMonth() -> RoundedCornerShape(bottomEnd = 8.dp)
+                    else -> RectangleShape
+                }
+            )
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onLongPress = {
+                        selected = !selected
+                    }
+                )
             }
-        )
     ) {
         Box(
             modifier = Modifier
@@ -288,7 +301,7 @@ fun CalendarDayCell(
                 } else {
                     MaterialTheme.typography.bodyLarge
                 },
-                color = when (day.event) {
+                color = if (selected) MaterialTheme.colorScheme.onPrimary else when (day.event) {
                     CalendarEvent.WorkingDay -> MaterialTheme.colorScheme.onSurface
                     CalendarEvent.Holiday -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurface
