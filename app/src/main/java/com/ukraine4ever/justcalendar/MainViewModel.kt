@@ -8,7 +8,7 @@ import com.ibm.icu.util.Calendar
 import com.ibm.icu.util.ULocale
 import com.ukraine4ever.justcalendar.calendar.CalendarDay
 import com.ukraine4ever.justcalendar.calendar.CalendarEvent
-import com.ukraine4ever.justcalendar.calendar.Holidays2024
+import com.ukraine4ever.justcalendar.calendar.HolidaysUA
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
@@ -49,7 +49,7 @@ class MainViewModel : ViewModel() {
 
     private fun isWorkingDay(date: LocalDate): Boolean {
         val isPublicHoliday = if (Locale.getDefault().country == "UA") {
-            Holidays2024.find { it.isEqual(date) } != null
+            HolidaysUA.find { it.isEqual(date) } != null
         } else false
         val isWeekend = isWeekend(date.dayOfWeek)
         return !isWeekend && !isPublicHoliday

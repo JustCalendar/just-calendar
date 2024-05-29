@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">வெறும் காலண்டர்</string>
+    <string name="app_name">காலண்டர்</string>
     <string name="button_today">இன்று</string>
 </resources>

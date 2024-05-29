@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">শুধু ক্যালেন্ডার</string>
+    <string name="app_name">ক্যালেন্ডার</string>
     <string name="button_today">আজ</string>
 </resources>
