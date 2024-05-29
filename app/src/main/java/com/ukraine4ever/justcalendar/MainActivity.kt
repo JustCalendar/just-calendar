@@ -58,6 +58,7 @@ import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.ukraine4ever.justcalendar.calendar.CalendarDay
@@ -169,7 +170,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
                 else -> Icons.AutoMirrored.Default.KeyboardArrowRight
             }
             Icon(imageVector = icon, contentDescription = null)
-            Text(text = "Today")
+            Text(text = stringResource(id = R.string.button_today))
         }
     }
 }
