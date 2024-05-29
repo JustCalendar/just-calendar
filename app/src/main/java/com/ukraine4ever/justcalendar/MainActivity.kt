@@ -56,6 +56,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -63,8 +64,10 @@ import com.ukraine4ever.justcalendar.calendar.CalendarDay
 import com.ukraine4ever.justcalendar.calendar.CalendarEvent
 import com.ukraine4ever.justcalendar.ui.theme.DaysToPaymentTheme
 import kotlinx.coroutines.launch
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.TextStyle
+import java.time.temporal.WeekFields
 import java.util.Locale
 
 class MainActivity : ComponentActivity() {
@@ -124,7 +127,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
                                 .background(MaterialTheme.colorScheme.background)
                         )
                     }
-                    val daysOfWeek = listOf("Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Нд")
+                    val daysOfWeek = getLocalizedWeekdayNames(getLocale())
                     Row(modifier = Modifier.statusBarsPadding()) {
                         for (day in daysOfWeek) {
                             Text(
@@ -134,9 +137,7 @@ fun CalendarScreen(viewModel: MainViewModel) {
                                     .weight(1f)
                                     .background(
                                         MaterialTheme.colorScheme.onSurface
-                                            .copy(
-                                                alpha = 0.05f
-                                            )
+                                            .copy(alpha = 0.05f)
                                             .compositeOver(MaterialTheme.colorScheme.background),
                                         CircleShape
                                     ),
@@ -174,6 +175,10 @@ fun CalendarScreen(viewModel: MainViewModel) {
 }
 
 @Composable
+private fun getLocale(): Locale =
+    LocalContext.current.resources.configuration.locales[0] ?: Locale.getDefault()
+
+@Composable
 private fun ProgressIndicator(scrollState: ScrollState, visibleYears: Int) {
     val screenHeight =
         with(LocalDensity.current) { LocalConfiguration.current.screenHeightDp.dp.toPx() }
@@ -200,15 +205,17 @@ fun CalendarGrid(
     ) {
         // Display first days row
         val firstDay = days.first()
-        val dayIndex = firstDay.date.dayOfWeek.value
-        val daysInFirstWeek = 8 - dayIndex
+        val firstDayOfWeek = getFirstDayOfWeek(getLocale())
+        val daysBefore = (firstDay.date.dayOfWeek.value - firstDayOfWeek.value + 7) % 7
+        val daysInFirstWeek = 7 - daysBefore
         val firstWeekDays = days.take(daysInFirstWeek)
+
         var firstRowPosition by remember { mutableFloatStateOf(0F) }
         var itemPosition by remember { mutableFloatStateOf(0F) }
         Row(modifier = Modifier.onGloballyPositioned { layoutCoordinates ->
             firstRowPosition = layoutCoordinates.positionInRoot().y
         }) {
-            repeat(dayIndex - 1) {
+            repeat(daysBefore) {
                 Spacer(modifier = Modifier.weight(1f))
             }
             repeat(daysInFirstWeek) {
@@ -253,26 +260,26 @@ fun CalendarGrid(
     }
 }
 
-
 @Composable
 fun CalendarDayCell(
     day: CalendarDay,
     modifier: Modifier = Modifier,
 ) {
     var selected by remember { mutableStateOf(false) }
+    val isToday = day.date.isEqual(LocalDate.now())
+    val bgColor = if (day.date.month.value % 2 == 1) MaterialTheme.colorScheme.onSurface.copy(
+        alpha = 0.05f
+    ) else Color.Transparent
+
+    val bgShape = when (day.date.dayOfMonth) {
+        1 -> RoundedCornerShape(topStart = 8.dp)
+        day.date.lengthOfMonth() -> RoundedCornerShape(bottomEnd = 8.dp)
+        else -> RectangleShape
+    }
+
     Box(
         modifier = modifier
-            .background(
-                if (selected) MaterialTheme.colorScheme.primary
-                else if (day.date.month.value % 2 == 0) MaterialTheme.colorScheme.onSurface.copy(
-                    alpha = 0.05f
-                ) else Color.Transparent,
-                shape = if (selected) CircleShape else when (day.date.dayOfMonth) {
-                    1 -> RoundedCornerShape(topStart = 8.dp)
-                    day.date.lengthOfMonth() -> RoundedCornerShape(bottomEnd = 8.dp)
-                    else -> RectangleShape
-                }
-            )
+            .background(color = bgColor, shape = bgShape)
             .pointerInput(Unit) {
                 detectTapGestures(
                     onLongPress = {
@@ -287,10 +294,13 @@ fun CalendarDayCell(
                 .aspectRatio(1f)
                 .alpha(if (day.date < LocalDate.now()) 0.5f else 1f)
                 .then(
-                    if (day.date.isEqual(LocalDate.now())) Modifier.border(
-                        2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(50)
-                    )
-                    else Modifier
+                    if (isToday) {
+                        Modifier.background(
+                            MaterialTheme.colorScheme.primary, CircleShape
+                        )
+                    } else if (selected) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                    } else Modifier
                 )
         ) {
             Text(
@@ -301,7 +311,7 @@ fun CalendarDayCell(
                 } else {
                     MaterialTheme.typography.bodyLarge
                 },
-                color = if (selected) MaterialTheme.colorScheme.onPrimary else when (day.event) {
+                color = if (isToday) MaterialTheme.colorScheme.onPrimary else when (day.event) {
                     CalendarEvent.WorkingDay -> MaterialTheme.colorScheme.onSurface
                     CalendarEvent.Holiday -> MaterialTheme.colorScheme.error
                     else -> MaterialTheme.colorScheme.onSurface
@@ -326,4 +336,16 @@ fun CalendarDayCell(
             }
         }
     }
+}
+
+fun getLocalizedWeekdayNames(locale: Locale): List<String> {
+    val firstDayOfWeek = getFirstDayOfWeek(locale)
+    val daysOfWeek = DayOfWeek.entries
+    val orderedDaysOfWeek = daysOfWeek.dropWhile { it != firstDayOfWeek } +
+            daysOfWeek.takeWhile { it != firstDayOfWeek }
+    return orderedDaysOfWeek.map { it.getDisplayName(TextStyle.SHORT, locale) }
+}
+
+fun getFirstDayOfWeek(locale: Locale): DayOfWeek {
+    return WeekFields.of(locale).firstDayOfWeek
 }
