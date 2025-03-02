@@ -1,2 +1,2 @@
 # just-calendar
-My clone repository
+Calendar app
