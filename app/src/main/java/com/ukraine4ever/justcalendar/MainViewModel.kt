@@ -16,7 +16,7 @@ import java.util.Locale
 class MainViewModel : ViewModel() {
     private val _calendarState: MutableState<List<CalendarDay>> = mutableStateOf(emptyList())
     val calendarState: State<List<CalendarDay>> = _calendarState
-    val visibleYears = 10
+    val visibleYears = 3
     private val locale = Locale.getDefault()
 
     init {

@@ -17,8 +17,8 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -152,25 +152,33 @@ fun CalendarScreen(viewModel: MainViewModel) {
         }
 
         val scope = rememberCoroutineScope()
-        Button(
-            onClick = {
-                scope.launch {
-                    scrollState.scrollTo(todayScrollPosition)
-                }
-            }, modifier = Modifier
-                .align(Alignment.BottomStart)
-                .systemBarsPadding()
-                .padding(16.dp),
-            contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+        Box(
+            Modifier
+                .align(Alignment.BottomCenter)
+                .widthIn(max = 800.dp)
+                .fillMaxWidth()
         ) {
+            Button(
+                onClick = {
+                    scope.launch {
+                        scrollState.scrollTo(todayScrollPosition)
+                    }
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .safeDrawingPadding()
+                    .padding(8.dp),
+                contentPadding = ButtonDefaults.ButtonWithIconContentPadding
+            ) {
 
-            val icon = when {
-                (scrollState.value > todayScrollPosition) -> Icons.Default.KeyboardArrowUp
-                scrollState.value < todayScrollPosition -> Icons.Default.KeyboardArrowDown
-                else -> Icons.AutoMirrored.Default.KeyboardArrowRight
+                val icon = when {
+                    (scrollState.value > todayScrollPosition) -> Icons.Default.KeyboardArrowUp
+                    scrollState.value < todayScrollPosition -> Icons.Default.KeyboardArrowDown
+                    else -> Icons.AutoMirrored.Default.KeyboardArrowRight
+                }
+                Icon(imageVector = icon, contentDescription = null)
+                Text(text = stringResource(id = R.string.button_today))
             }
-            Icon(imageVector = icon, contentDescription = null)
-            Text(text = stringResource(id = R.string.button_today))
         }
     }
 }
@@ -323,7 +331,7 @@ fun CalendarDayCell(
                     text = day.date.month.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
                     modifier = Modifier.align(Alignment.TopCenter),
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                 )
 
                 if (day.date.dayOfYear == 1) {
@@ -331,7 +339,7 @@ fun CalendarDayCell(
                         text = day.date.year.toString(),
                         modifier = Modifier.align(Alignment.BottomCenter),
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = if (isToday) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
