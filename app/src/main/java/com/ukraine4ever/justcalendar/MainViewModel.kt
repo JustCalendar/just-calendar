@@ -1,29 +1,36 @@
 package com.ukraine4ever.justcalendar
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewModelScope
 import com.ibm.icu.util.Calendar
 import com.ibm.icu.util.ULocale
 import com.ukraine4ever.justcalendar.calendar.CalendarDay
 import com.ukraine4ever.justcalendar.calendar.CalendarEvent
-import com.ukraine4ever.justcalendar.calendar.HolidaysUA
+import com.ukraine4ever.justcalendar.holidays.PublicHoliday
+import com.ukraine4ever.justcalendar.holidays.PublicHolidayRepository
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
 
-class MainViewModel : ViewModel() {
+class MainViewModel(context: Context) : ViewModel() {
     private val _calendarState: MutableState<List<CalendarDay>> = mutableStateOf(emptyList())
     val calendarState: State<List<CalendarDay>> = _calendarState
     val visibleYears = 3
     private val locale = Locale.getDefault()
+    private val repository = PublicHolidayRepository(context)
 
     init {
-        updateCalendar(LocalDate.now()) // Change year and month as needed
+        initCalendar(LocalDate.now()) // Change year and month as needed
     }
 
-    private fun updateCalendar(now: LocalDate) {
+    private fun initCalendar(now: LocalDate) {
         // Generate all days of the month with events
         val allDays: MutableList<CalendarDay> = mutableListOf()
 
@@ -45,14 +52,12 @@ class MainViewModel : ViewModel() {
         }
 
         _calendarState.value = allDays
+        fetchPublicHolidays(List(visibleYears) { index -> firstYear + index }, Locale.getDefault())
     }
 
     private fun isWorkingDay(date: LocalDate): Boolean {
-        val isPublicHoliday = if (Locale.getDefault().country == "UA") {
-            HolidaysUA.find { it.isEqual(date) } != null
-        } else false
         val isWeekend = isWeekend(date.dayOfWeek)
-        return !isWeekend && !isPublicHoliday
+        return !isWeekend
     }
 
     private fun isWeekend(dayOfWeek: DayOfWeek): Boolean {
@@ -78,4 +83,50 @@ class MainViewModel : ViewModel() {
         }
     }
 
+    private fun fetchPublicHolidays(years: List<Int>, locale: Locale) {
+        viewModelScope.launch {
+            try {
+                val holidaysList = mutableListOf<PublicHoliday>()
+                years.forEach { year ->
+                    val result = repository.getPublicHolidays(year, locale)
+                    holidaysList.addAll(result)
+                }
+                updateCalendarWithHolidays(holidaysList)
+            } catch (e: Exception) {
+                Log.e("MainViewModel", "Error fetching holidays: ${e.message}", e)
+            }
+        }
+    }
+
+    private fun updateCalendarWithHolidays(holidays: List<PublicHoliday>) {
+        val holidayDates: List<LocalDate> = holidays.map { LocalDate.parse(it.date) }
+        val newCalendarState = _calendarState.value.toMutableList()
+        var listWasUpdated = false
+        newCalendarState.forEachIndexed { index, day ->
+            holidayDates.forEach { holiday ->
+                if (day.date == holiday && day.event == CalendarEvent.WorkingDay) {
+                    newCalendarState[index] =
+                        newCalendarState[index].copy(event = CalendarEvent.Holiday)
+                    if (!listWasUpdated) {
+                        listWasUpdated = true
+                    }
+                }
+            }
+        }
+
+        if (listWasUpdated) {
+            _calendarState.value = newCalendarState
+        }
+    }
+
+}
+
+class MainViewModelFactory(private val context: Context) : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        if (modelClass.isAssignableFrom(MainViewModel::class.java)) {
+            @Suppress("UNCHECKED_CAST")
+            return MainViewModel(context) as T
+        }
+        throw IllegalArgumentException("Unknown ViewModel class")
+    }
 }
